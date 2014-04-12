@@ -30,7 +30,7 @@
 		B3B5E7971836B7CB00F71D86 /* Affiliation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Affiliation.m; sourceTree = "<group>"; };
 		B3B5E7991836BD2000F71D86 /* Call.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Call.h; sourceTree = "<group>"; };
 		B3B5E79A1836BD2000F71D86 /* Call.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Call.m; sourceTree = "<group>"; };
-		B3C957EB18F8844700598144 /* readme.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = readme.md; sourceTree = "<group>"; };
+		B3C957EB18F8844700598144 /* readme.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = readme.md; path = ../readme.md; sourceTree = "<group>"; };
 		B3C957EC18F885EB00598144 /* mottrunk.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = mottrunk.txt; sourceTree = "<group>"; };
 		B3CF8B36183544E700F66B8C /* Trunker */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Trunker; sourceTree = BUILT_PRODUCTS_DIR; };
 		B3CF8B39183544E700F66B8C /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
