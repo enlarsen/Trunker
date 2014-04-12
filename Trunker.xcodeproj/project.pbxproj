@@ -7,9 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B3B5E7981836B7CB00F71D86 /* Affiliation.m in Sources */ = {isa = PBXBuildFile; fileRef = B3B5E7971836B7CB00F71D86 /* Affiliation.m */; };
+		B3B5E79B1836BD2000F71D86 /* Call.m in Sources */ = {isa = PBXBuildFile; fileRef = B3B5E79A1836BD2000F71D86 /* Call.m */; };
 		B3CF8B3A183544E700F66B8C /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B3CF8B39183544E700F66B8C /* Foundation.framework */; };
 		B3CF8B3D183544E700F66B8C /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = B3CF8B3C183544E700F66B8C /* main.m */; };
-		B3CF8B41183544E700F66B8C /* Trunker.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = B3CF8B40183544E700F66B8C /* Trunker.1 */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -19,18 +20,22 @@
 			dstPath = /usr/share/man/man1/;
 			dstSubfolderSpec = 0;
 			files = (
-				B3CF8B41183544E700F66B8C /* Trunker.1 in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 1;
 		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		B3B5E7961836B7CB00F71D86 /* Affiliation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Affiliation.h; sourceTree = "<group>"; };
+		B3B5E7971836B7CB00F71D86 /* Affiliation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Affiliation.m; sourceTree = "<group>"; };
+		B3B5E7991836BD2000F71D86 /* Call.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Call.h; sourceTree = "<group>"; };
+		B3B5E79A1836BD2000F71D86 /* Call.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Call.m; sourceTree = "<group>"; };
+		B3C957EB18F8844700598144 /* readme.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = readme.md; sourceTree = "<group>"; };
+		B3C957EC18F885EB00598144 /* mottrunk.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = mottrunk.txt; sourceTree = "<group>"; };
 		B3CF8B36183544E700F66B8C /* Trunker */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Trunker; sourceTree = BUILT_PRODUCTS_DIR; };
 		B3CF8B39183544E700F66B8C /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		B3CF8B3C183544E700F66B8C /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		B3CF8B3F183544E700F66B8C /* Trunker-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Trunker-Prefix.pch"; sourceTree = "<group>"; };
-		B3CF8B40183544E700F66B8C /* Trunker.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = Trunker.1; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -73,8 +78,13 @@
 		B3CF8B3B183544E700F66B8C /* Trunker */ = {
 			isa = PBXGroup;
 			children = (
+				B3C957EC18F885EB00598144 /* mottrunk.txt */,
 				B3CF8B3C183544E700F66B8C /* main.m */,
-				B3CF8B40183544E700F66B8C /* Trunker.1 */,
+				B3B5E7961836B7CB00F71D86 /* Affiliation.h */,
+				B3B5E7971836B7CB00F71D86 /* Affiliation.m */,
+				B3B5E7991836BD2000F71D86 /* Call.h */,
+				B3C957EB18F8844700598144 /* readme.md */,
+				B3B5E79A1836BD2000F71D86 /* Call.m */,
 				B3CF8B3E183544E700F66B8C /* Supporting Files */,
 			);
 			path = Trunker;
@@ -139,6 +149,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B3B5E79B1836BD2000F71D86 /* Call.m in Sources */,
+				B3B5E7981836B7CB00F71D86 /* Affiliation.m in Sources */,
 				B3CF8B3D183544E700F66B8C /* main.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -251,6 +263,7 @@
 				B3CF8B46183544E700F66B8C /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

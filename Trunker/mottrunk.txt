@@ -1,0 +1,1021 @@
+Subject:      Motorola Trunked Radio Control Channel Info
+From:         arron <arron5@geocities.com>
+Date:         1997/02/08
+Message-Id:   <32FD2EF4.1630@geocities.com>
+Organization: The University of Alabama in Huntsville
+Newsgroups:   rec.radio.scanner,alt.radio.scanner
+
+        Motorola Trunked Radio Control Channel Information
+
+INTRODUCTION
+
+     There has been some interest expressed in the Motorola's trunked
+radio system data channel signalling format, especially as to how it
+relates to building a trunked radio scanner. The information in this
+file should enable any motivated individual to decode the outbound
+signalling words on the control channel. With this information and the
+appropriate hardware a remotely tunable scanner can successfully track
+individual talk groups. An example program listing is included that
+displays trunked system information with a simple op-amp interface that
+plugs into your PC's serial port.
+
+     Also, an minor explanation and correction to the error correcting
+routine for a program previously posted that receive Motorola mobile
+data terminal (MDT) transmissions is given.
+
+     This posting is basically a response to those people who expressed
+an interest in this type of information. Additionally, this posting
+hopes to dispel some of the excessive half-truths and arrogant
+flatulence which have created an unbearably asphyxiating stench on these
+newsgroups recently (i.e. he who writes things along the lines of "Only
+Uniden and I are smart enough to figure this out - piece of cake. And I
+figured it out FIRST, back in 1993. I have witnesses... I know Uniden
+STOLE the idea from me... You want a copy of the code? Just kidding...
+By the way, who wants to buy my trunktracker board if I get it built in
+the next 10 or so years?"). If you have information to share please do
+so without leaving out vital details and stop trying to impress everyone
+else with how little you know. If that's too much for you to handle then
+shut the fuck up.
+
+------------------------------------------------------------------------
+
+BASIC PROTOCOL OF MOTOROLA TRUNKED RADIO SYSTEM
+
+    References -
+
+    1. K. Zdunek, "Design considerations for trunked radio systems,"
+36th IEEE Vehicular Technology Conference, (published by IEEE), pp.
+194-201.
+
+    U.S. Patent # 4692945 covers the extended OSW format. Other patents
+cover such things as the error correcting scheme used (#4055832) and
+some of the basic transmission protocols (#4159469).
+
+    There was some file floating around several years ago about all the
+gory details of a TYPE I Motorola trunked radio system. It was
+originally posted by a certain Chris Wheeler.
+
+     When standing by, each radio sits and monitors the data channel
+waiting for programming information or an assignment to a particular
+voice channel. Programming information that can be sent to each
+individual radio can include (but is not limited to) talk group
+assignment, dynamic talk group creation, voice encryption key updates,
+date and time, deactivate the radio, new system frequency assignments,
+turning the radio transmit on (useful when the radio has been stolen),
+and of course a frequency assignment for voice communications. Here we
+are mainly interested only in the information sent out on the control
+channel (more specifically - which talk group is assigned to what
+frequency). Once we know which talk groups are active we can decide
+whether we want to send our scanner to that particular frequency.
+
+     The control channel modulation format is two level FSK at 3600
+baud. In order to extract the desired information one must:
+
+     1. synchronize the receiver with transmitted data frames
+     2. Undo the Bit interleave
+     3. Identify and Correct errors using the error correcting code
+     4. Perform an error detection check to verify received data
+     5. Translate the received information into the desired action
+
+The above steps are described in detail below. As an added bonus, the
+two level FSK modulation format means that a scanner's discriminator
+output can be sent to an op amp level comparator hooked up to your PC's
+serial port. An appropriate program can then send out tuning information
+to your scanner.
+------------------------------------------------------------------------
+
+FRAME SYNC
+
+     One needs to figure out when a signalling word starts before one
+attempts to receive the information. Accordingly, between every 76 bit
+information frame there is an 8 bit frame sync byte which is allways the
+same. Synchronization is achieved by looking for this frame sync byte
+every 84 bits and stripping out the 76 bit frame for further processing.
+This frame sync byte is :
+
+     1 0 1 0 1 1 0 0
+
+(Leftmost bit is transmitted first in our notation)
+
+------------------------------------------------------------------------
+
+BIT INTERLEAVING
+
+     Reference: U.S. patent # 4159469
+
+     We have a total of 76 bits in each frame. Let us represent the
+received data stream as :
+
+     {1,2,3,4,5,6,7,8,9,10,11,12,...,74,75,76}
+
+Before transmission the bits were scrambled into a different order so
+that adjacent bits are seperated by a number of other bits. Therefore,
+when an error burst occurs the erroneous bits will be spread out all
+over the data frame when the bits are placed back into the orignal
+order. The convolutional error correcting coding then has a decent
+chance of being able to correct all the erroneous bits. The bits in the
+received data frame must be read off in the following order:
+
+     {1,20,39,58,2,21,40,59,3,22,41,60,...}
+
+Presumably Motorola does not expect burst errors of longer than four
+bits to be a problem.
+
+------------------------------------------------------------------------
+
+HOW THE CONVOLUTIONAL ERROR CORRECTING CODING WORKS
+
+     Reference - U.S. Patent # 4055832 describes the ECC used for the
+motorola control channel signalling.
+
+     The code is formally described as a "Rate 1/2 convolutional error
+correcting code". Rate 1/2 means that for every information bit there
+will be one parity bit (therefore the information transmission rate is
+1/2 the channel baud rate). The encoder calculates the parity bit by
+XORing the previous two information bits. The output then consists of
+alternating information and parity bits. If I represents an information
+bit and P represents a parity bit the data stream looks like:
+
+    IPIPIPIPIPIPIPIPIPIP....
+
+Just to make sure we're all on the same footing the bits are tranmsitted
+from left to right. Now lets give an example of some information being
+transmitted:
+
+    Information. . . . . . : 0 0 1 0 0 0 1 1 0 0 0 1 1 1 1 0
+    Parity . . . . . . . . :  0 0 1 1 0 0 1 0 1 0 0 1 0 0 0 1
+    Transmitted bit Stream : 00001101000011100100001110101001
+
+One should note that a '1' information bit produces a '1101' in the
+output stream. This property is additive - if one has a '1 1' in the
+information surrounded by zeroes the output will be '110100 + 001101'
+which is '111001'. This is called "convolution".
+
+     Great... Now how does one find and correct errors? The circuit
+described in U.S. patent # 4055832 does the following: 1) Take the
+received bit stream and recalculate the parity bits using only the
+received information bits to construct an "expected" receive bit stream
+; and 2) XOR the actual received bit stream with the expected receive
+bit stream to construct something called the "syndrome". If all bits
+were received correctly then the actual and expected bit stream will
+match up and the syndrome will only consist of '0's. Let's follow this
+procedure for the above example:
+
+    Received bit stream: 00001101000011100100001110101001
+
+    Strip out Info bits: 0 0 1 0 0 0 1 1 0 0 0 1 1 1 1 0
+    Calculate Parity   :  0 0 1 1 0 0 1 0 1 0 0 1 0 0 0 1
+    Expected bit stream: 00001101000011100100001110101001
+
+    SYNDROME           : 00000000000000000000000000000000
+    (actual XOR expected bit stream)
+
+The syndrome is all zeroes - no errors occured. Now lets see what
+happens when we introduce a few errors in the received bit stream (the
+bad bits have an * above them):
+
+                               *       *          *
+    Received bit stream: 00001111000011000100001111101001
+
+    Strip out Info bits: 0 0 1 1 0 0 1 0 0 0 0 1 1 1 1 0
+    Calculate Parity   :  0 0 1 0 1 0 1 1 0 0 0 1 0 0 0 1
+    Expected bit stream: 00001110010011010000001110101001
+
+    SYNDROME CALCULATION:
+    Received bit stream: 00001111000011000100001111101001
+    Expected bit stream: 00001110010011010000001110101001
+    SYNDROME           : 00000001010000010100000001000000
+
+Now there are non-zero bits in the syndrome: errors have occured. Now
+one wants to figure out which bits were received wrong. Keep in mind
+that one must distinguish between an error in an information bit and in
+a parity bit. Because of the convolutional property the wrong
+information bit causes the next two parity bits to be flipped. So we
+look in the syndrome for two consequtive '1's in the parity positions.
+Then we know which bits are wrong. Now let's say we have received a
+parity bit wrong - then the syndrome will only have a single bit set and
+we know the information bits are OK. So let's use the syndrome to
+correct the received bit stream:
+
+    SYNDROME           : 00000001010000010100000001000000
+    BAD BITS                   *       *
+
+    Received bit stream: 00001111000011000100001111101001
+    Received Info bits : 0 0 1 1 0 0 1 0 0 0 0 1 1 1 1 0
+    BAD BITS           :       *       *
+    Corrected Info bits: 0 0 1 0 0 0 1 1 0 0 0 1 1 1 1 0
+
+And there we are! In this example we received two wrong information bits
+and one wrong parity bit. We managed to identify and correct the wrong
+information bits. The way we implemented things, the syndrome spots
+corresponding to the information bits will always be zero.
+
+     This protocol is designed to be implemented in hardware using just
+a few shift registers and sundry other logic gates. At the start of each
+signal word the shift registers are reset to zero - one can think of the
+an extra "phantom" zero information bit just to left of the first real
+information bit. On the other end we add a flush out bit to make sure
+all real information bits benifit from the error correcting. The total
+number of information bits therefore is: 16 address bits, 1 Group flag,
+10 command bits, 10 error detection bits, and 1 flush out bit: 38 total
+information bits. With the parity bits we get a total of 76 bits in the
+signalling word structure.
+
+     There are a few things to add at this point - a lot of bit errors
+means we might not be able to properly correct all of the received
+information bits. Even worse, errors tend to occur in concentrated
+bursts which would overwhelm this error correcting scheme. In the
+previous section we described the idea of bit interleaving to deal with
+burst errors. Finally, an error detecting code is described which is
+used to verify that the received information is correct.
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+Somewhat off the subject side note:
+
+Motorola's Mobile data terminal system uses a very similar rate 1/2
+convolultional error correcting scheme. The only difference is that the
+convolution spans many more bits (specifically the parity bit is the
+modulo 2 sum of the most current info bit, 2 info bits back, 5 info bits
+back, and six info bits back). Error correction takes place similarly
+except one now looks for a 1100101 pattern in the syndrome (here the
+spots corresponding to the information bits in the syndrome have been
+left out). Such a detected pattern indicates the information bit that
+passed by 7 bits previously was wrong. The philosophy to be used is that
+if 3 of the four ones match that pattern one has an information bit in
+error along with one parity bit error (and if all four ones match up
+than only the information bit is wrong without any messed up parity
+bits). You can easily verify that the pattern 1100101 has at most 1 bit
+in common with any shifted version of itself - this means that if two
+information bits relatively close to each other are in error you will
+still have at least 3 ones in that pattern to alert you to the location
+of the bogus information bits. In this sense the error correcting code
+using for Mobile Data Terminals is somewhat more robust - it can correct
+two wrong side by side information bits which cannot be done with the
+scheme used for trunked signalling words. Some of you may remember a
+posting giving a program listing for decoding mobile data terminal
+tranmissions. The authors of that program unfortunately reversed the
+pattern being looked for so the error correction routine probably did
+more harm than good. The following code corrections should be placed in
+the last part of routine pork :
+
+      if ( (synd & 0x0001) > 0) nsy++;
+      if ( (synd & 0x0002) > 0) nsy++;
+      if ( (synd & 0x0010) > 0) nsy++;
+      if ( (synd & 0x0040) > 0) nsy++;
+      /* assume bit is correctable */
+      if ( nsy >= 3)
+      {
+        printf ("*");
+        synd = synd ^ 0x53;
+        line[lc - 7] ^= 0x01;
+      }
+
+- - - - - - - - - -
+
+And even more off the subject... Another minor error in the MDT program
+has been found in the serial interrupt service routine. The following
+line is correct:
+
+  if ((inportb(0x3fe) & 0xF0) > 0) dtick = dtick | 0x8000;
+                              else dtick = dtick & 0x3fff;
+
+The earlier version had an ^ in the above line instead of the |. This
+line takes the time increment between zero crossing and sets its most
+significant bit to reflect the state of the input line on the serial
+port. If the input line is 1 we want to OR the MSB with 1, not XOR it.
+This would only have been a problem if more than 130 1's in a row were
+received which means it would have had no practical consequence.
+Nonetheless, we believe the record should be set straight.
+
+------------------------------------------------------------------------
+
+BIT INTERLEAVING
+
+     Reference: U.S. patent # 4159469
+
+     We have a total of 76 bits in each frame. Let us represent the
+received data stream as :
+
+     {1,2,3,4,5,6,7,8,9,10,11,12,...,74,75,76}
+
+Before transmission the bits were scrambled into a different order so
+that adjacent bits are seperated by a number of other bits. Therefore,
+when an error burst occurs the erroneous bits will be spread out all
+over the data frame when the bits are placed back into the orignal
+order. The convolutional error correcting coding then has a decent
+chance of being able to correct all the erroneous bits. The bits in the
+received data frame must be read off in the following order:
+
+     {1,20,39,58,2,21,40,59,3,22,41,60,...}
+
+Presumably Motorola does not expect burst errors of longer than four
+bits to be a problem.
+
+------------------------------------------------------------------------
+
+FINAL CHECK - ERROR DETECTION POLYNOMIAL
+
+     We have 27 information bits and 10 error detection bits. This is
+the final check on whether the received signalling word is correct.
+Here's an algorithm that will allow let you check things out yourself:
+
+     1. Load some 10 bit register A with 0x36E and another 10 bit
+        register B with 0x393
+
+     2. If the LSB bit of register A is 1 then let let A = 0x225 ^ (A >> 1)
+        Otherwise let A = A >> 1
+
+     3. If the first information bit is 1 then let B = B ^ A
+
+     4. Repeat steps 2 and 3 for all the other 27 information bits
+
+     5. When done register B should hold the same value as the error
+        detection code transmitted in the data frame.
+
+If the error detection codes do not match up then you have an
+uncorrectable error and you should disregard this data frame.
+
+------------------------------------------------------------------------
+
+FORMAT OF RECEIVED INFORMATION
+
+     At this point you will have 27 information bits in the received
+signalling word. We will define the first 16 as the "ID" bits. The next
+bit is a flag indicating whether this signalling word is for a group or
+an individual call - a '1' means individual, '0' means group. The next
+10 bits are the command bits.
+
+     For some unknown reason you must XOR the ID bits with the pattern
+0x33C7 and the command bits with 0x32A. Don't ask us why. It just turns
+the commands and ID bits into those seen in Motorola literature.
+
+     The most common command is "0x308" - this means that this
+signalling word and at least the next one are paired (see U.S. pat. #
+4692945 where they even have $308 drawn in the first command register).
+The second command register determines what this particular command
+does. For example: if the second command is 0x310 then this means that
+the radio addressed in the first ID field is assigned to the talk-group
+given in the second ID field. Another example: if the second command is
+0x322 then this is a time/date stamp (First ID: bits 9-15 give year;
+bits 5-8 give month; bits 0-4 give day; Second ID: bits 8-13 give Hour;
+Bits 0-7 give Minute; Bits 13-15 unknown) which is typically repeated
+three times every minute. The second command field of 0x30B gives a pair
+that is repeated every few seconds; function unknown.
+
+     Other commands can be things like 0x3C0 or 0x32B (again, functions
+unknown). There are a huge number of commands that can be sent to
+trunked radio; unfortunately we only know the time/date, talk group
+assignment, and some of the frequency assignment functions. If anyone
+could post a complete list of commands and functions then we will write
+you into our wills!!!
+
+     The most important thing is the frequency assignment. The procedure
+varies according to system type. However, we have found the following
+formula tends to give reasonable results for most 800MHz trunked systems
+operating on 25KHz channel spacings:
+
+     Frequency = 851.1125 + 0.025*(command XOR 0x004)
+
+The talk group that corresponds to this frequency will be given in the
+ID part of the signalling word. Once we have the frequency we check to
+make sure it's in the appropriate range (for example, a frequency of 871
+MHz would mean we probably misinterpreted a different command as a
+frequency assignment). Unfortunately you will still get frequency
+assignments in the proper band that do not belong to the trunked
+repeater system. To avoid having your scanner continuously jumping to a
+bogus channel you probably want to check each channel assignment with a
+list of valid channels which will greatly reduce this problem. Rumor has
+it that the new Uniden TrunkTracker requires you to enter just such a
+list for each trunked repeater system you want to monitor - presumably
+Uniden hasn't found an elegant way out of this problem either. On
+occasion you will get a frequency assignment pointing to the current
+control channel. In this case the ID in signalling word will be the
+system ID.
+
+     As you can see, trunked systems in the 400MHz and 900MHz bands (and
+some in the 800 MHz band) will use completely frequency allocation
+methods. Once again, will someone please post some real information?
+
+     Next, how does the ID transmitted over the air translate into talk
+groups? I'm not that sure, but I can make some general observations. The
+more significant bits correspond to larger and larger groups. For
+example, some hypothetical system might have the entire police
+department with ID's of the form 8xxx whilst the fire department had
+id's of the form 9xxx. Under the police department one might DL checks
+in the group 8090 and several precincts with the form 8080 and 8070.
+Then some tactical channels might be of the form 8380 and 8370. Kind of
+messy, but the important thing is that you can easily identify which
+talk-group is used for which purpose without knowing every last detail
+of how the talk-groups are structured.
+
+------------------------------------------------------------------------
+
+A FEW WORDS ABOUT THE PROGRAM
+
+     The only program option you have is to reverse the received data
+stream polarity by including a command line arguement (e.g. type in
+"name X" to start the program with reverse polarity). Other than that
+the program either works or it doesn't work. The program expects to see
+the interface on the first serial port. If you don't like it you're
+certainly welcome to rewrite the program. Now what kind of interface do
+you need? Well, here's something from a previous post about mobile data
+terminals:
+
+>COMPUTER/SCANNER INTERFACE
+>
+>      Those of you who have already built your interface for decoding
+>pager messages should be able to use that interface without any further
+>ado. For those starting from scratch - you might want to check out
+>packages intended for pager decoding such as PD203 and the interfaces
+>they describe. The following excerpt gives an example of a decoder that
+>should work just fine (lifted out of the PD203 POCSAG pager decoder
+>shareware documentation):
+>
+>>
+>>   0.1 uF                    |\ +12v
+>> ---||-----------------------|- \|
+>> AF IN    |                  |741 \
+>> ----     |                  |    /--------------------- Data Out
+>>     |    \            ------|+ /|  |                    CTS (pin 5/8)
+>>     |    / 100K       |     |/-12v |                 or DSR (pin 6/6)
+>>     |    \            |            |
+>>    GND   /            ----/\/\/\----         GND ------ GND (pin 7/5)
+>>          |            |    100K
+>>          |            \                  N.B. Pin Numbers for com port are
+>>         GND           /                  given as x/y, where x is for a 25
+>>                       \  10K             way, y for a 9 way.
+>>                       /
+>>                       |
+>>                      GND
+>>
+>> The  above circuit is a Schmitt Trigger, having thresholds of about +/- 1v.
+>> If such a large threshold is not required, eg for a  discriminator  output,
+>> then  the  level of positive feedback may be reduced by either reducing the
+>> value of the 10K resistor or by increasing the value of the  100K  feedback
+>> resistor.
+>>
+>> The +/- 12v for the op-amp can be derived from unused signals  on  the  COM
+>> port (gives more like +/- 10v but works fine !):-
+>>
+>>
+>>    TxD (2/3) --------------|<-------------------------------------- -12v
+>>                                     |                  |
+>>    RTS (4/7) --------------|<--------       GND        - -
+>>                   |                          |         _ +  10uF
+>>                    --------->|-------        - -       |
+>>                    Diodes 1N4148    |        - + 10uF  GND
+>>                                     |        |
+>>    DTR (20/4) ------------->|-------------------------------------- +12v
+>>
+>
+>If I were building this circuit I would strongly suggest tying the
+>non-inverting (+) input of the op-amp to ground since you are working
+>directly with the discriminator output and don't need a Schmitt trigger.
+>All these parts or equivalents are easily available (even at your local
+>Radio Shack which stocks the finest collection of components that have
+>failed the manufacturer's quality control checks and supported by a
+>sales staff that's always got the wrong answers to your questions).
+>
+>Also: DO NOT use the RI (ring indicator) as an input to the computer.
+
+As it says, use the discrimator output on your scanner. Check things out
+with your handy-dandy PD203 POCSAG pager decoder package.
+
+     Compile the program - I know it works with Borland C compilers. And
+don't run it under windows. If it works you should see frequencies
+popping up on the left side of the screen along with active talk groups.
+The call type is given the G/I flag. On the right hand side you'll see
+various system housekeeping information such as the date and time (don't
+set your watch by their indicated time). And that's just about it.
+
+     Oh yes - the calculated frequencies work only for some 800MHz
+trunked radio systems. If you have a different system the frequencies
+will be really screwed up. If you figure out the proper decoding scheme
+for other systems please post your results. On the display your real
+frequencies will be mixed with a handfull of bogus frequencies - it's up
+to you to sort them out.
+
+------------------------------------------------------------------------
+
+HOW DO I GET THE PROGRAM TO CONTROL MY SCANNER?
+
+     1. Connect your serial port output to your scanner (with a level
+translater if necessary). The program includes some vestigal code that
+allows you to send information out over the RS-232 port (send_char
+routine). Routine send_char is simple, stupid, and reliable. There is
+more information in the program comments about how to configure the
+desired baud rate, parity, and word length. Don't try to use the
+computer's built in BIOS functions - they will get horribly confused by
+all the strange things happening on the serial port's interface lines.
+
+     2. Monitor the OSW data stream. Whenever a talk group pops up that
+you want to follow tell your scanner the right frequency to go to. You
+will probably want to make a list of valid frequencies to keep your
+scanner from continuously bouncing to a bogus frequency.
+
+     3. You don't want to continuously listen to the trunked data
+channel or you will go insane. Solutions? Send the audio through your
+sound card and mute it where appropriate. Use a computer controlled
+relay to switch the sound on/off... Whatever...
+
+     4. The next problem for a real user friendly trunking system is how
+to detect when the tranmission on one particular channel has ended. It's
+a real pain when you have to hit a key to send your scanner back to the
+control channel. Solution? Take advantage of the sub-audible signalling
+sent while the channel is active. This will be a 21 bit frame that has
+sync data, ID information and 2 parity bits sent at 150 bauds - "low
+speed handshake". At the end you have a 200mSec burst of disconnect tone
+(163.64Hz). Either of these could be taken advantage of. Even better,
+why don't you pull the squelch gate signal out of your scanner? If you
+do that then you're all set - send this on to the computer and let it
+tell your scanner when to return to the control channel. Your scanner
+would now be a simple hands off trunk tracker.
+
+------------------------------------------------------------------------
+
+FINALLY THE PROGRAM LISTING ITSELF
+
+/* ---------------- CUT HERE  -----------------------------------------*/
+
+#include <stdio.h>
+#include <conio.h>
+#include <dos.h>
+#include <math.h>
+
+/*--------------------------------------------------------------------*/
+/*                                                                    */
+/*   This programs displays some of the most important data sent over */
+/*   a Motorola trunked radio system control channel.                 */
+/*   Right now it expects an interface described in the above text    */
+/*   to sit at COM1                                                   */
+/*   If you want improvements you have to do them yourself.           */
+/*                                                                    */
+/*   This is not be used by anyone for any monetary gain. If you do   */
+/*   we hope Motorola's lawyers will crush the life out of you.       */
+/*                                                                    */
+/*   Complaints? Remember - you get what you paid for. And you didn't */
+/*   pay a cent for this program.                                     */
+/*                                                                    */
+/*   Still got Complaints? Well here are our canned responses:        */
+/*                                                                    */
+/*       - The code is the comment                                    */
+/*       - What do you expect? I work for Microsoft                   */
+/*       - Cheesiest is easiest                                       */
+/*       - I'll put the comments in later                             */
+/*       - If it was hard to write it should be hard to read          */
+/*       - Go ahead and try to find me                                */
+/*       - Rember - you always have a fiend in Jesus                  */
+/*                                                                    */
+/*--------------------------------------------------------------------*/
+/*                                                                    */
+/* port info  :  COM1                                if dlab bit =1   */
+/*      0x3f8 : receive/transmit data                     baud0       */
+/*      0x3f9 : interrupt enable register     - IER       baud1       */
+/*      0x3fa : interrupt identifier register - IIR                   */
+/*      0x3fb : line control register         - LCR                   */
+/*      0x3fc : modem control register        - MCR                   */
+/*      0x3fd : line status register          - LSR                   */
+/*      0x3fe : modem status register         - MSR                   */
+/*                                                                    */
+/*--------------------------------------------------------------------*/
+/*                                                                    */
+/* PORT INFO  : 8259 INTERRUPT CONTROLLER                             */
+/*      0X021 : A CORRESPONDING LOW BIT ENABLES A SPECIFIC INTERRUPT  */
+/*              COM1 IS IRQ4, AND THEREFORE CONTROLLED BY BIT 0X10    */
+/*      0X020 : WHENEVER AN INTERRUPT IS RESOLVED, A 0X20 SHOULD BE   */
+/*              PORTED OUT HERE TO GENERATE AN END OF INTERRUPT       */
+/*              SIGNAL.                                               */
+/*                                                                    */
+/*--------------------------------------------------------------------*/
+
+/* global variables */
+int lc=0;
+double baudrate = 9600.0; /* baud rate of computer to scanner link */
+                          /* Note: for exmaple/vestigal code purposes */
+int fobp=0;     /* pointer to current position in array fob           */
+char ob[100];   /* output buffer for packet before being sent to screen */
+int obp=0;      /* pointer to current position in array ob              */
+int aid[51],naid=0,uaid[51];
+
+struct osw_stru{
+  int cmd;
+  int id;
+  int grp;
+  int ok;
+};
+
+struct osw_stru bosw[20];
+
+static unsigned int buflen= 15000;      /* length of data buffer      */
+static volatile unsigned int cpstn = 0; /* current position in buffer */
+static unsigned int fdata[15001] ;      /* frequency data array       */
+
+void interrupt (*oldfuncc) (); /* vector to old com port interrupt    */
+
+/**********************************************************************/
+/*                                this is serial com port interrupt   */
+/* we assume here that it only gets called when one of the status     */
+/* lines on the serial port changes (that's all you have hooked up).  */
+/* All this handler does is read the system timer (which increments   */
+/* every 840 nanoseconds) and stores it in the fdata array. The MSB   */
+/* is set to indicate whether the status line is zero. In this way    */
+/* the fdata array is continuously updated with the appropriate the   */
+/* length and polarity of each data pulse for further processing by   */
+/* the main program.                                                  */
+void interrupt com1int()
+{
+  static unsigned int d1,d2,ltick,tick,dtick;
+
+  /* the system timer is a 16 bit counter whose value counts down     */
+  /* from 65535 to zero and repeats ad nauseum. For those who really  */
+  /* care, every time the count reaches zero the system timer         */
+  /* interrupt is called (remember that thing that gets called every  */
+  /* 55 milliseconds and does housekeeping such as checking the       */
+  /* keyboard.                                                        */
+  outportb (0x43, 0x00);       /* latch counter until we read it      */
+  d1 = inportb (0x40);         /* get low count                       */
+  d2 = inportb (0x40);         /* get high count                      */
+
+  /* get difference between current, last counter reading             */
+  tick  = (d2 << 8) + d1;
+  dtick = ltick - tick;
+  ltick = tick;
+
+  if ((inportb(0x3fe) & 0xF0) > 0) dtick = dtick | 0x8000;
+                              else dtick = dtick & 0x3fff;
+
+  fdata[cpstn] = dtick;        /* put freq in fdata array             */
+  cpstn  ++;                   /* increment data buffer pointer       */
+  if (cpstn>buflen) cpstn=0;   /* make sure cpstn doesnt leave array  */
+
+  d1 = inportb (0x03fa);       /* clear IIR                           */
+  d1 = inportb (0x03fd);       /* clear LSR                           */
+  d1 = inportb (0x03fe);       /* clear MSR                           */
+  d1 = inportb (0x03f8);       /* clear RX                            */
+  outportb (0x20, 0x20);       /* this is the END OF INTERRUPT SIGNAL */
+                               /* "... that's all folks!!!!"          */
+}
+
+void set8250(double bps)       /* sets up the 8250 UART               */
+{
+  static unsigned int t,dv,tp;
+
+  dv = (int) 1843200.0/(16.0*bps);
+  /* how to configure your serial port setup:          */
+  /* do you want two stop bits? then make sure you set bit 2 in tp */
+  /* do you want a parity bit generated? then set bit bit 3 in tp  */
+  /* do you want even parity? then set bit 4 in tp                 */
+  /* do you want an 8 bit word length? set bits 0 and 1 in tp      */
+  /* do you want an 7 bit word length? set bit  1 in tp            */
+  tp = 0x80 + 0x02 + 0x01;
+  outportb (0x3fb, tp);  /* set line control register  */
+  outport  (0x3f8, dv);  /* output brg divisor latch   */
+  tp = tp & 0x7f;        /* switch out brg divisor reg */
+  outportb (0x3fb, tp);
+
+  /* only enable those interrupts caused by changing levels on the    */
+  /* status lines                                                     */
+  outportb (0x03fb, 0x00);     /*  set IER on 0x03f9                  */
+  outportb (0x03f9, 0x08);     /*  enable MODEM STATUS INTERRUPT      */
+
+  outportb (0x03fc, 0x0a);     /*  push up RTS, DOWN DTR              */
+
+  t = inportb(0x03fd);         /*  clear LSR                          */
+  t = inportb(0x03f8);         /*  clear RX                           */
+  t = inportb(0x03fe);         /*  clear MSR                          */
+  t = inportb(0x03fa);         /*  clear IID                          */
+  t = inportb(0x03fa);         /*  clear IID - again to make sure     */
+}
+
+void set8253()                 /*  set up the 8253 timer chip         */
+{                              /* NOTE: ctr zero, the one we are using*/
+                               /*  is incremented every 840nSec, is   */
+                               /*  main system time keeper for dos    */
+  outportb (0x43, 0x34);       /* set ctr 0 to mode 2, binary         */
+  outportb (0x40, 0x00);       /* this gives us the max count         */
+  outportb (0x40, 0x00);
+}
+
+/****************************************************************/
+
+void show_time()
+{
+  static unsigned int t;
+  t = bosw[1].id;
+  gotoxy(41,1); printf ("System Date/Time");
+  gotoxy(41,2); printf ("Year : %02u",t>>9);
+  gotoxy(41,3); printf ("Month: %02u",(t>>5)&0x0f);
+  gotoxy(41,4); printf ("Day  : %02u",t&0x1f);
+  t = bosw[0].id;
+  gotoxy(41,5); printf ("Time : %2u:%02u",(t>>8)&0x1f,t&0xff);
+}
+
+void show_unk()
+{
+  gotoxy(41,10); printf ("Unknown Info");
+  gotoxy(41,11); printf ("%04X  %04X",bosw[0].id,bosw[1].id);
+}
+
+void show_unk2()
+{
+  gotoxy(41,13); printf("Com. 32B: %04X",bosw[0].id);
+}
+
+void show_unk3()
+{
+  gotoxy(41,14); printf("Com. 309: %04X",bosw[0].id);
+}
+
+void show_tgr()
+{
+  static int oy=2;
+  if (oy == 25) movetext(60,3,80,25,60,2) ; else oy++;
+  gotoxy(60,oy);
+  printf ("%04X --> %04X",bosw[1].id,bosw[0].id);
+}
+
+void show_freak()
+{
+  static int nos=0,i,st=0,x,y,te;
+  static double fr;
+
+  /* if the command could be frequency assignment keep track of it */
+    st = 0;
+    for (i=0; i< naid; i++)
+    {
+      if (aid[i] == bosw[0].cmd)
+      {
+        st ++;
+        x = i/24;
+        y = 1 + i - (x*24);
+        x = 10 + (x * 20);
+        gotoxy(x,y);
+        if (bosw[0].grp == 1) printf ("G "); else printf("I ");
+        printf("%04X",bosw[0].id);
+        uaid[i]=1;
+      }
+    }
+    if (st == 0)  /* id not found */
+    {
+      aid[i]=bosw[0].cmd;
+      uaid[naid]=1;
+      x = i / 24;
+      y = 1 + i - (x*24);
+      x = 1 + (x * 20);
+      gotoxy(x,y);
+      te = bosw[0].cmd ^ 0x004;
+      fr = 851.1125 + (0.025 * (double) te);
+      printf("%8.7g ",fr);
+      if (bosw[0].grp == 1) printf ("G "); else printf("I ");
+      printf("%04X",bosw[0].id);
+      if (naid<48) naid++;
+    }
+
+  nos++;
+  if (nos == 40)   /* every 40 OSW's : mark out inactive channels */
+  {
+    for (i=0; i<naid; i++)
+    {
+      if (uaid[i] == 0)
+      {
+        x = i / 24;
+        y = 1 + i - (x*24);
+        x = 10 + (x * 20);
+        gotoxy(x,y);
+        printf("      ");
+      }
+      uaid[i] = 0;
+    }
+    nos = 0;
+  }
+}
+
+/* send a serial character. Vestigal code just for example purpose */
+void send_char(char c)
+{
+  /* wait for transmit reg to empty */
+  while ( (inportb(0x3fd) & 0x20) == 0x00);
+
+  /* send character */
+  outportb(0x3f8,c);
+}
+
+/* THIS routine is called every time a new OSW has been received    */
+/* This would be the place to put a routine that controls a scanner */
+/* right now it tries displays selected OSW data to the screen.     */
+/* Trunked Frequency assignements are shown along with the active   */
+/* Talkgroups. */
+void show_osw()
+{
+
+  if ((bosw[0].cmd <  0x2d0) && (bosw[1].cmd != 0x308)) show_freak();
+  if ((bosw[0].cmd == 0x322) && (bosw[1].cmd == 0x308)) show_time();
+  if ((bosw[1].cmd == 0x308) && (bosw[0].cmd == 0x310)) show_tgr();
+  if ((bosw[1].cmd == 0x308) && (bosw[0].cmd == 0x30b)) show_unk();
+  if (bosw[0].cmd == 0x32b) show_unk2();
+  if (bosw[0].cmd == 0x309) show_unk3();
+
+  /* let's say you at this point wanted to tell your scanner to go   */
+  /* to some frequency and you have it hooked up to the RS-232 port. */
+  /* Send a series of send_char commands giving the right command    */
+  /* codes for your scanner.                                         */
+  /* The baud rate is defined in the global variables section.       */
+  /* The setup is in the set8250 routine                             */
+  /* Example:
+  send_char(69); send_char(65); send_char(84); send_char(32);
+  send_char(77); send_char(69);
+  */
+
+}
+
+/* process de-interleaved incoming data stream */
+/* inputs: -1 resets this routine in prepartion for a new OSW       */
+/*         48 zero bit                                              */
+/*         49 one bit                                               */
+/* once an OSW is received it will be placed into the buffer bosw[] */
+/* bosw[0] is the most recent entry                                 */
+void proc_osw(int sl)
+{
+  static int ct,l,sr,sax,f1,f2,iid,cmd,neb=0;
+  static char osw[50],gob[100];
+
+  if (sl == -1) ct = 0;
+  else
+  {
+    gob[ct] = sl;
+    ct++;
+
+      if (ct == 76)
+      {
+        sr = 0x036E;
+        sax = 0x0393;
+        neb = 0;
+
+        /* run through convolutional error correction routine */
+        /* Reference : US PATENT # 4055832                    */
+        for (l=0; l<76; l+=2)
+        {
+          osw[l>>1] = gob[l];   /* osw gets the DATA bits   */
+          if (gob[l] == 49)     /* gob becomes the syndrome */
+          {
+            gob[l  ] ^= 0x01;
+            gob[l+1] ^= 0x01;
+            gob[l+3] ^= 0x01;
+          }
+        }
+        for (l=0; l<76; l+=2)   /* now correct errors       */
+        {
+          if ( (gob[l+1] == 49) && (gob[l+3] == 49) )
+          {
+            osw[l >> 1] ^= 0x01;
+            gob[l+1] ^= 0x01;
+            gob[l+3] ^= 0x01;
+          }
+        }
+
+        /* run through error detection routine */
+        for (l=0; l<27; l++)
+        {
+          if ((sr & 0x01) != 0 ) sr = (sr >> 1) ^ 0x0225; else sr = sr >> 1;
+          if (osw[l] == 49) sax = sax ^ sr;
+        }
+        for (l=0; l<10; l++)
+        {
+          if (osw[36-l] == 49) f1 = 0; else f1 = 1;
+          if ((sax & 0x01) > 0) f2 = 1; else f2 = 0;
+          sax = sax >> 1;
+          if (f1 != f2) neb++;  /* neb counts # of wrong bits */
+        }
+
+        /* slide down bosw buffer */
+        for (l=10; l>=1; l--) bosw[l]=bosw[l-1];
+
+        /* if no errors - OSW received properly; process it */
+        if (neb == 0)
+        {
+          for (l=0; l<16; l++)
+          {
+            iid = iid << 1;
+            if (osw[l] == 48) iid++;
+          }
+          iid = iid ^ 0x33C7;
+          bosw[0].ok = 1;
+          bosw[0].id = iid;
+          if (osw[16] == 48) bosw[0].grp = 1; else bosw[0].grp = 0;
+          cmd = 0;
+          for (l = 17; l<27; l++)
+          {
+            cmd = cmd << 1;
+            if (osw[l] == 48) cmd++;
+          }
+          cmd = cmd ^ 0x032A;
+          bosw[0].cmd = cmd;
+
+          show_osw();
+
+        }
+        else bosw[0].ok = 0;
+      }
+  }
+}
+
+void pigout()  /* de-interleave OSW stored in array ob[] and process */
+{
+  static int i1,i2,k;
+    proc_osw(-1);
+    for (i1=0; i1<19; i1++)
+    {
+      for (i2=0; i2<4; i2++)
+      {
+        k = (i2*19) + i1;
+        proc_osw( (int) ob[k]);
+      }
+    }
+}
+
+/* this routine looks for the frame sync and splits off the 76 bit */
+/* data frame and sends it on for further processing               */
+void frame_sync(char gin)
+{
+  static int sr = 0, fs = 0xAC, bs=85;
+
+  /* keep up 8 bit sliding register for sync checking purposes */
+  sr = sr << 1;
+  sr = sr & 0xff;
+  if (gin == 49) sr = sr | 0x01;
+
+  ob[bs-1] = gin;
+
+  /* if sync seq and enough bits are found - data block */
+  if ((sr == fs) && (bs > 83))
+  {
+    pigout();  /* the latest frame is stored in array ob[] */
+    bs = 0;
+  }
+  if (bs < 98) bs++;
+}
+
+void main (int argc)
+{
+  unsigned int n,i=0,cw1=49,cw0=48;
+  char s=48;
+  double dt,exc=0.0,clk=0.0,xct;
+
+  if (argc > 1)
+  {
+    cw1 = 48;
+    cw0 = 49;
+  }
+
+  clrscr();
+
+  gotoxy(60,1);
+  printf ("ID   --> TALK GROUP");
+
+  /* dt is the number of expected clock ticks per bit */
+  dt =  1.0/(3600.0*838.8e-9);
+
+  oldfuncc = getvect(0x0c);    /* save COM1 Vector                    */
+  setvect (0x0c, com1int);     /* Capture COM1 vector                 */
+
+  n = inportb (0x21);          /* enable IRQ4 interrupt               */
+  outportb(0x21, n & 0xef);
+
+  set8253();                   /* set up 8253 timer chip              */
+
+  set8250(baudrate);           /* set up 8250 UART                    */
+
+  while (kbhit() == 0)
+  {
+   if (i != cpstn)
+   {
+    if  ( ( fdata[i] & 0x8000) != 0) s = cw0; else s = cw1;
+
+    /* add in new number of cycles to clock  */
+    clk += (fdata[i] & 0x7fff);
+    xct = exc + 0.5 * dt;  /* exc is current boundary */
+    while ( clk >= xct )
+    {
+      frame_sync(s);   /* send raw bit stream to first processing routin */
+      clk = clk - dt;
+    }
+    /* clk now holds new boundary position. update exc slowly... */
+    /* 0.005 sucks; 0.02 better; 0.06 mayber even better; 0.05 seems pretty good */
+    exc = exc + 0.0250*(clk - exc);
+
+    i++;
+    if( i >buflen) i = 0;
+   }
+
+  }
+
+  outportb (0x21, n);          /* disable IRQ4 interrupt              */
+  setvect (0x0c, oldfuncc);    /* restore old COM1 Vector             */
+
+  gotoxy(1,24);
+
+}
+
+/* ---------------------- END OF POST ---------------------------------*/
+
